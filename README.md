@@ -1,0 +1,69 @@
+# CameraApp
+
+A simple Python OpenCV application for real-time webcam capture with interactive color modes, brightness/contrast adjustment, and histogram visualization.
+
+## Features
+
+- **Live Webcam Feed**  
+    Displays real-time video from your default camera.
+
+- **Color Modes**  
+    - `COLOR`: Standard BGR color.
+    - `GRAY`: Grayscale.
+    - `HSV`: HSV color space.
+
+- **Brightness & Contrast Adjustment**  
+    - Toggle adjustment mode with `B`.
+    - Adjust contrast (`Alpha`) and brightness (`Beta`) using trackbars.
+
+- **Histogram Visualization**  
+    - Toggle histogram display with `S`.
+    - Shows intensity distribution for the current mode.
+
+- **Keyboard Controls**
+    - `G`: Switch to Grayscale mode
+    - `C`: Switch to Color mode
+    - `H`: Switch to HSV mode
+    - `B`: Toggle brightness/contrast adjustment
+    - `S`: Toggle histogram display
+    - `Q`: Quit the application
+
+## Usage
+
+1. **Install [uv](https://github.com/astral-sh/uv):**  
+   Follow the instructions on the [uv GitHub page](https://github.com/astral-sh/uv) to install `uv` for your platform.
+
+2. **Set up the project:**
+    ```bash
+    # Navigate to your project directory
+    cd path/to/your/project
+
+    # Create a new virtual environment
+    uv venv .venv
+
+    # Activate the virtual environment
+    # On Unix/macOS:
+    source .venv/bin/activate
+    # On Windows:
+    .venv\Scripts\activate
+
+    # Sync dependencies (ensure you have a requirements.txt or pyproject.toml)
+    uv sync
+    ```
+
+3. **Run the app:**
+    ```bash
+    uv run main.py
+    ```
+
+4. **Interact using the keyboard shortcuts above.**
+
+
+## Notes
+
+- Requires a working webcam.
+- Tested with Python 3.x and OpenCV 4.x.
+
+## License
+
+AIT License.
