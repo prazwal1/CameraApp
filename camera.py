@@ -59,31 +59,65 @@ class CameraApp:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     def draw_help_text(self, display_frame):
-        help_text = "G: Gray | C: Color | H: HSV | B: Toggle Adjust | S: Toggle Histogram | Q: Quit"
+        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust Brightness and Contrast | H: Histogram"
+        quit_text = "Q: Quit"
         mode_text = f"Mode: {self.mode}"
-        if isinstance(display_frame, np.ndarray) and display_frame.ndim == 2:
-            color = 255
-        else:
-            color = (0, 255, 0)
-        cv2.putText(display_frame, help_text, (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        cv2.putText(display_frame, mode_text, (10, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+        lines = []
+
+        # Split help_text into multiple lines if too long for frame width
+        frame_width = display_frame.shape[1] if display_frame.ndim == 3 else display_frame.shape[1]
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.8
+        thickness = 2
+
+        # Helper to split text smartly
+        def split_text(text, max_width):
+            words = text.split(' ')
+            lines = []
+            current = ""
+            for word in words:
+                test = current + (' ' if current else '') + word
+                size = cv2.getTextSize(test, font, font_scale, thickness)[0][0]
+                if size > max_width and current:
+                    lines.append(current)
+                    current = word
+                else:
+                    current = test
+            if current:
+                lines.append(current)
+            return lines
+
+        # Leave some margin
+        max_text_width = int(frame_width * 0.95)
+        lines.extend(split_text(help_text, max_text_width))
+        lines.append(quit_text)
+        lines.append(mode_text)
         if self.show_adjust:
             adj_text = f"Alpha: {self.alpha:.1f}  Beta: {self.beta}"
-            cv2.putText(display_frame, adj_text, (10, 90),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            lines.append(adj_text)
+
+        # Draw each line with vertical spacing
+        y = 30
+        for i, text in enumerate(lines):
+            if i == len(lines) - 1:
+                color = (255, 0, 0)
+            elif i == len(lines) - 2:
+                color = (0, 0, 255)
+            else:
+                color = (113, 179, 60)
+            cv2.putText(display_frame, text, (10, y), font, font_scale, color, thickness)
+            y += 30
 
     def handle_key(self, key):
-        if key == ord('g'):
-            self.mode = "GRAY"
-        elif key == ord('c'):
+        if key == ord('1'):
             self.mode = "COLOR"
-        elif key == ord('h'):
+        elif key == ord('2'):
+            self.mode = "GRAY"
+        elif key == ord('3'):
             self.mode = "HSV"
-        elif key == ord('b'):
+        elif key == ord('a'):
             self.show_adjust = not self.show_adjust
-        elif key == ord('s'):
+        elif key == ord('h'):
             self.show_hist = not self.show_hist
         elif key == ord('q'):
             return False

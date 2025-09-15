@@ -21,11 +21,11 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     - Shows intensity distribution for the current mode.
 
 - **Keyboard Controls**
-    - `G`: Switch to Grayscale mode
-    - `C`: Switch to Color mode
-    - `H`: Switch to HSV mode
-    - `B`: Toggle brightness/contrast adjustment
-    - `S`: Toggle histogram display
+    - `1`: Switch to Color mode
+    - `2`: Switch to Grayscale mode
+    - `3`: Switch to HSV mode
+    - `A`: Toggle brightness/contrast adjustment
+    - `H`: Toggle histogram display
     - `Q`: Quit the application
 
 ## Usage
