@@ -11,6 +11,8 @@ class CameraApp:
         self.show_adjust = False
         self.show_gaussian = False
         self.gaussian_initialized = False
+        self.show_bilateral = False
+        self.bilateral_initialized = False
         cv2.namedWindow('Camera')
 
     def nothing(self, x):
@@ -27,32 +29,32 @@ class CameraApp:
     def create_trackbars_gaussian(self):
         cv2.createTrackbar('Kernel Size', 'Camera', 1, 20, self.nothing) 
         cv2.createTrackbar('SigmaX', 'Camera', 0, 100, self.nothing)
+        
+    def create_trackbars_bilateral(self):
+        cv2.createTrackbar('Diameter', 'Camera', 1, 20, self.nothing) 
+        cv2.createTrackbar('SigmaColor', 'Camera', 0, 100, self.nothing)
+        cv2.createTrackbar('SigmaSpace', 'Camera', 0, 100, self.nothing)
 
     def show_histogram(self, frame):
-        h = 300
-        w = 512
+        h, w = 300, 512
         hist_img = np.zeros((h, w, 3), dtype=np.uint8)
-        if self.mode == "GRAY":
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+
+        num_channels = 1 if self.mode == "GRAY" else 3
+
+        for i in range(num_channels):
+            hist = cv2.calcHist([frame], [i], None, [256], [0, 256])
             cv2.normalize(hist, hist, 0, h, cv2.NORM_MINMAX)
+
+            color = colors[i] if num_channels == 3 else (255, 255, 255)
+
             for x in range(1, 256):
-                cv2.line(hist_img, (x-1, h-int(hist[x-1])), (x, h-int(hist[x])), (255,255,255), 2)
-        elif self.mode == "HSV":
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            colors = [(255,0,0), (0,255,0), (0,0,255)]
-            for i, col in enumerate(colors):
-                hist = cv2.calcHist([hsv], [i], None, [256], [0, 256])
-                cv2.normalize(hist, hist, 0, h, cv2.NORM_MINMAX)
-                for x in range(1, 256):
-                    cv2.line(hist_img, (x-1, h-int(hist[x-1])), (x, h-int(hist[x])), col, 2)
-        else:  # COLOR
-            colors = [(255,0,0), (0,255,0), (0,0,255)]
-            for i, col in enumerate(colors):
-                hist = cv2.calcHist([frame], [i], None, [256], [0, 256])
-                cv2.normalize(hist, hist, 0, h, cv2.NORM_MINMAX)
-                for x in range(1, 256):
-                    cv2.line(hist_img, (x-1, h-int(hist[x-1])), (x, h-int(hist[x])), col, 2)
+                cv2.line(hist_img, 
+                        (x - 1, h - int(hist[x - 1])),
+                        (x, h - int(hist[x])),
+                        color, 2)
+
         return hist_img
 
     def process_color(self, frame):
@@ -65,7 +67,7 @@ class CameraApp:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     def draw_help_text(self, display_frame):
-        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust Brightness and Contrast | H: Histogram | G: Gaussian Blur"
+        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust Brightness and Contrast | H: Histogram | G: Gaussian Blur | B: Bilateral Filter"  
         quit_text = "Q: Quit"
         mode_text = f"Mode: {self.mode}"
         lines = []
@@ -127,6 +129,8 @@ class CameraApp:
             self.show_hist = not self.show_hist
         elif key == ord('g'):
             self.show_gaussian = not self.show_gaussian
+        elif key == ord('b'):
+            self.show_bilateral = not self.show_bilateral
         elif key == ord('q'):
             return False
         return True
@@ -161,6 +165,24 @@ class CameraApp:
                 self.remove_trackbars()
                 self.gaussian_initialized = False
         return adj_frame
+    
+    def handle_bilateral_mode(self, adj_frame):
+        if self.show_bilateral:
+            if not self.bilateral_initialized:
+                self.create_trackbars_bilateral()
+                self.bilateral_initialized = True
+            diameter = cv2.getTrackbarPos('Diameter', 'Camera')
+            sigmaColor = cv2.getTrackbarPos('SigmaColor', 'Camera')
+            sigmaSpace = cv2.getTrackbarPos('SigmaSpace', 'Camera')
+            if diameter < 1:
+                diameter = 1
+            adj_frame = cv2.bilateralFilter(adj_frame, diameter, sigmaColor, sigmaSpace)
+        else:
+            if self.bilateral_initialized:
+                self.remove_trackbars()
+                self.bilateral_initialized = False
+        return adj_frame
+    
 
     def handle_histogram_mode(self, adj_frame):
         if self.show_hist:
@@ -192,7 +214,7 @@ class CameraApp:
             adjust_initialized = self.handle_adjust_mode(adjust_initialized)
             adj_frame = cv2.convertScaleAbs(frame, alpha=self.alpha, beta=self.beta)
             adj_frame = self.handle_gaussian_mode(adj_frame)
-
+            adj_frame = self.handle_bilateral_mode(adj_frame)
             display_frame = self.handle_running_mode(adj_frame)
             
             self.draw_help_text(display_frame)

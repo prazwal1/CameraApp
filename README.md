@@ -24,6 +24,10 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     - Toggle Gaussian blur with `G`.
     - Smooths the video feed for noise reduction.
 
+- **Bilateral Filter**  
+    - Toggle Gaussian blur with `B`.
+    - Applies edge-preserving smoothing to reduce noise while keeping edges sharp.
+
 - **Keyboard Controls**
     - `1`: Switch to Color mode
     - `2`: Switch to Grayscale mode
@@ -31,6 +35,7 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     - `A`: Toggle brightness/contrast adjustment
     - `H`: Toggle histogram display
     - `G`: Toggle Gaussian blur
+    - `B`: Toggle Bilateral filter
     - `Q`: Quit the application
 
 ## Usage
