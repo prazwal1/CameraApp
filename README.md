@@ -1,6 +1,6 @@
 # CameraApp
 
-A simple Python OpenCV application for real-time webcam capture with interactive color modes, brightness/contrast adjustment, and histogram visualization.
+A simple Python OpenCV application for real-time webcam capture with interactive color modes, brightness/contrast adjustment, histogram visualization, and Gaussian blur.
 
 ## Features
 
@@ -20,12 +20,17 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     - Toggle histogram display with `S`.
     - Shows intensity distribution for the current mode.
 
+- **Gaussian Blur**  
+    - Toggle Gaussian blur with `G`.
+    - Smooths the video feed for noise reduction.
+
 - **Keyboard Controls**
     - `1`: Switch to Color mode
     - `2`: Switch to Grayscale mode
     - `3`: Switch to HSV mode
     - `A`: Toggle brightness/contrast adjustment
     - `H`: Toggle histogram display
+    - `G`: Toggle Gaussian blur
     - `Q`: Quit the application
 
 ## Usage
@@ -57,7 +62,6 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     ```
 
 4. **Interact using the keyboard shortcuts above.**
-
 
 ## Notes
 

@@ -9,6 +9,8 @@ class CameraApp:
         self.beta = 0     # Brightness control (0-100)
         self.show_hist = False
         self.show_adjust = False
+        self.show_gaussian = False
+        self.gaussian_initialized = False
         cv2.namedWindow('Camera')
 
     def nothing(self, x):
@@ -21,6 +23,10 @@ class CameraApp:
     def remove_trackbars(self):
         cv2.destroyWindow('Camera')
         cv2.namedWindow('Camera')
+        
+    def create_trackbars_gaussian(self):
+        cv2.createTrackbar('Kernel Size', 'Camera', 1, 20, self.nothing) 
+        cv2.createTrackbar('SigmaX', 'Camera', 0, 100, self.nothing)
 
     def show_histogram(self, frame):
         h = 300
@@ -59,7 +65,7 @@ class CameraApp:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     def draw_help_text(self, display_frame):
-        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust Brightness and Contrast | H: Histogram"
+        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust Brightness and Contrast | H: Histogram | G: Gaussian Blur"
         quit_text = "Q: Quit"
         mode_text = f"Mode: {self.mode}"
         lines = []
@@ -119,6 +125,8 @@ class CameraApp:
             self.show_adjust = not self.show_adjust
         elif key == ord('h'):
             self.show_hist = not self.show_hist
+        elif key == ord('g'):
+            self.show_gaussian = not self.show_gaussian
         elif key == ord('q'):
             return False
         return True
@@ -135,6 +143,24 @@ class CameraApp:
                 self.remove_trackbars()
                 adjust_initialized = False
         return adjust_initialized
+
+    def handle_gaussian_mode(self, adj_frame):
+        if self.show_gaussian:
+            if not self.gaussian_initialized:
+                self.create_trackbars_gaussian()
+                self.gaussian_initialized = True
+            ksize = cv2.getTrackbarPos('Kernel Size', 'Camera')
+            sigmaX = cv2.getTrackbarPos('SigmaX', 'Camera')
+            if ksize % 2 == 0:
+                ksize += 1
+            if ksize < 1:
+                ksize = 1
+            adj_frame = cv2.GaussianBlur(adj_frame, (ksize, ksize), sigmaX)
+        else:
+            if self.gaussian_initialized:
+                self.remove_trackbars()
+                self.gaussian_initialized = False
+        return adj_frame
 
     def handle_histogram_mode(self, adj_frame):
         if self.show_hist:
@@ -165,14 +191,14 @@ class CameraApp:
 
             adjust_initialized = self.handle_adjust_mode(adjust_initialized)
             adj_frame = cv2.convertScaleAbs(frame, alpha=self.alpha, beta=self.beta)
+            adj_frame = self.handle_gaussian_mode(adj_frame)
 
             display_frame = self.handle_running_mode(adj_frame)
             
             self.draw_help_text(display_frame)
             cv2.imshow('Camera', display_frame)
-
             self.handle_histogram_mode(adj_frame)
-
+        
             key = cv2.waitKey(1) & 0xFF
             running = self.handle_key(key)
 
