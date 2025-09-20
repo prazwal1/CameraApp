@@ -15,7 +15,7 @@ class CameraApp:
         self.show_bilateral = False
         self.show_canny = False
         self.hough_transform = False
-
+        self.mode_panorama = False
 
         # State
         self.active_trackbar_mode = None   # "ADJUST", "GAUSSIAN", "BILATERAL", or None
@@ -225,7 +225,6 @@ class CameraApp:
                     x1, y1, x2, y2 = line[0]
                     cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         return frame
-
 
 
     def handle_histogram_mode(self, adj_frame):
