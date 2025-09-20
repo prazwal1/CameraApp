@@ -13,6 +13,8 @@ class CameraApp:
         self.show_adjust = False
         self.show_gaussian = False
         self.show_bilateral = False
+        self.show_canny = False
+
 
         # State
         self.active_trackbar_mode = None   # "ADJUST", "GAUSSIAN", "BILATERAL", or None
@@ -21,6 +23,11 @@ class CameraApp:
 
     def nothing(self, x):
         pass
+
+    def create_trackbars_canny(self):
+        cv2.createTrackbar('Threshold1', 'Camera', 50, 500, self.nothing)
+        cv2.createTrackbar('Threshold2', 'Camera', 150, 500, self.nothing)
+
 
     def create_trackbars_adjust(self):
         cv2.createTrackbar('Alpha x0.1', 'Camera', int(self.alpha*10), 30, self.nothing)
@@ -68,7 +75,7 @@ class CameraApp:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     def draw_help_text(self, display_frame):
-        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust | H: Histogram | G: Gaussian Blur | B: Bilateral Filter"  
+        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust | H: Histogram | G: Gaussian Blur | B: Bilateral | C: Canny Edge"
         quit_text = "Q: Quit"
         mode_text = f"Mode: {self.mode}"
         lines = []
@@ -128,9 +135,19 @@ class CameraApp:
             self.toggle_mode("BILATERAL")
         elif key == ord('h'):
             self.show_hist = not self.show_hist
+        elif key == ord('c'):
+            self.toggle_mode("CANNY")
         elif key == ord('q'):
             return False
         return True
+
+    def handle_canny_mode(self, frame):
+        if self.show_canny and self.active_trackbar_mode == "CANNY":
+            t1 = cv2.getTrackbarPos('Threshold1', 'Camera')
+            t2 = cv2.getTrackbarPos('Threshold2', 'Camera')
+            return cv2.Canny(frame, t1, t2)
+        return frame
+
 
     def toggle_mode(self, mode):
         """Enable one mode and disable others (mutual exclusivity)."""
@@ -154,6 +171,9 @@ class CameraApp:
             elif mode == "BILATERAL":
                 self.create_trackbars_bilateral()
                 self.show_bilateral = True
+            elif mode == "CANNY":
+                self.create_trackbars_canny()
+                self.show_canny = True
 
             self.active_trackbar_mode = mode
 
@@ -211,7 +231,8 @@ class CameraApp:
             adj_frame = cv2.convertScaleAbs(frame, alpha=self.alpha, beta=self.beta)
             adj_frame = self.handle_gaussian_mode(adj_frame)
             adj_frame = self.handle_bilateral_mode(adj_frame)
-
+            adj_frame = self.handle_canny_mode(adj_frame)
+            
             display_frame = self.handle_running_mode(adj_frame)
             self.draw_help_text(display_frame)
             cv2.imshow('Camera', display_frame)
