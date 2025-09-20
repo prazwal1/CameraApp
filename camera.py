@@ -14,6 +14,7 @@ class CameraApp:
         self.show_gaussian = False
         self.show_bilateral = False
         self.show_canny = False
+        self.hough_transform = False
 
 
         # State
@@ -23,6 +24,12 @@ class CameraApp:
 
     def nothing(self, x):
         pass
+
+    def create_trackbars_hough_lines(self):
+        cv2.createTrackbar('Threshold', 'Camera', 50, 200, self.nothing)
+        cv2.createTrackbar('Min Line Length', 'Camera', 50, 200, self.nothing)
+        cv2.createTrackbar('Max Line Gap', 'Camera', 10, 100, self.nothing)
+        
 
     def create_trackbars_canny(self):
         cv2.createTrackbar('Threshold1', 'Camera', 50, 500, self.nothing)
@@ -75,7 +82,7 @@ class CameraApp:
         return cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     def draw_help_text(self, display_frame):
-        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust | H: Histogram | G: Gaussian Blur | B: Bilateral | C: Canny Edge"
+        help_text = "1: Color | 2: Gray | 3: HSV | A: Adjust | H: Histogram | G: Gaussian Blur | B: Bilateral | C: Canny Edge | D: Hough Lines"
         quit_text = "Q: Quit"
         mode_text = f"Mode: {self.mode}"
         lines = []
@@ -137,6 +144,8 @@ class CameraApp:
             self.show_hist = not self.show_hist
         elif key == ord('c'):
             self.toggle_mode("CANNY")
+        elif key == ord('d'):
+            self.toggle_mode("HOUGH")
         elif key == ord('q'):
             return False
         return True
@@ -147,6 +156,7 @@ class CameraApp:
             t2 = cv2.getTrackbarPos('Threshold2', 'Camera')
             return cv2.Canny(frame, t1, t2)
         return frame
+    
 
 
     def toggle_mode(self, mode):
@@ -174,7 +184,9 @@ class CameraApp:
             elif mode == "CANNY":
                 self.create_trackbars_canny()
                 self.show_canny = True
-
+            elif mode == "HOUGH":
+                self.create_trackbars_hough_lines()
+                self.hough_transform = True
             self.active_trackbar_mode = mode
 
     def handle_adjust_mode(self):
@@ -199,6 +211,22 @@ class CameraApp:
             if diameter < 1: diameter = 1
             return cv2.bilateralFilter(frame, diameter, sigmaColor, sigmaSpace)
         return frame
+
+    def handle_hough_lines(self, frame):
+        if self.hough_transform and self.active_trackbar_mode == "HOUGH":
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+            threshold = cv2.getTrackbarPos('Threshold', 'Camera')
+            min_line_length = cv2.getTrackbarPos('Min Line Length', 'Camera')
+            max_line_gap = cv2.getTrackbarPos('Max Line Gap', 'Camera')
+            lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold, minLineLength=min_line_length, maxLineGap=max_line_gap)
+            if lines is not None:
+                for line in lines:
+                    x1, y1, x2, y2 = line[0]
+                    cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        return frame
+
+
 
     def handle_histogram_mode(self, adj_frame):
         if self.show_hist:
@@ -232,7 +260,7 @@ class CameraApp:
             adj_frame = self.handle_gaussian_mode(adj_frame)
             adj_frame = self.handle_bilateral_mode(adj_frame)
             adj_frame = self.handle_canny_mode(adj_frame)
-            
+            adj_frame = self.handle_hough_lines(adj_frame)
             display_frame = self.handle_running_mode(adj_frame)
             self.draw_help_text(display_frame)
             cv2.imshow('Camera', display_frame)

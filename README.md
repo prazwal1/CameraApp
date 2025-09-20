@@ -28,9 +28,12 @@ A simple Python OpenCV application for real-time webcam capture with interactive
     - Toggle Gaussian blur with `B`.
     - Applies edge-preserving smoothing to reduce noise while keeping edges sharp.
 
-- ** Canny Edge Detection**
+- **Canny Edge Detection**
     - Toggle Canny edge detection with `C`.
     - Detects edges in the video feed using adjustable thresholds.
+
+- **Hough Line Detection**
+    - Toggle Hough line detection with `D`.
 
 - **Keyboard Controls**
     - `1`: Switch to Color mode
