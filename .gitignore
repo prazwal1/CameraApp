@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 *.mp4
+*.jpg
+*.jpeg
+*.png
+*.npz

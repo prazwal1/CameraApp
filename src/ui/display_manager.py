@@ -81,7 +81,8 @@ class DisplayManager:
             ("1: Color | 2: Gray | 3: HSV", (100, 255, 100)),
             ("A: Adjust | G: Gaussian | B: Bilateral", (100, 255, 100)),
             ("C: Canny Edge | D: Hough Lines", (100, 255, 100)),
-            ("P: Panorama", (100, 255, 100)),
+            ("P: Panorama | T: Transformations", (100, 255, 100)),
+            ("K: Calibration", (100, 255, 100)),
             ("H: Histogram | Q: Quit", (100, 255, 100)),
             ("SPACE: Panorama capture (when in P mode)", (100, 255, 100)),
             ("", (255, 255, 255)),  # Empty line

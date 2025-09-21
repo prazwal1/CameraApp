@@ -13,6 +13,7 @@ from .features.line_detection import LineDetectionHandler
 from .features.panorama import PanoramaHandler
 from .features.histogram import HistogramHandler
 from .features.transformations import ImageTransformationHandler
+from .features.calibrations import CameraCalibration
 from .ui.trackbar_manager import TrackbarManager
 from .ui.display_manager import DisplayManager
 from .ui.keyboard_handler import KeyboardHandler
@@ -37,6 +38,7 @@ class CameraApp:
         self.histogram = HistogramHandler()
         self.panorama = PanoramaHandler()
         self.transformations = ImageTransformationHandler()
+        self.calibration = CameraCalibration()
         # Application state
         self.running = True
         self.active_feature = None
@@ -61,6 +63,7 @@ class CameraApp:
         self.keyboard.bind_key('d', lambda: self._toggle_feature("hough"))
         self.keyboard.bind_key('p', lambda: self._toggle_feature("panorama"))
         self.keyboard.bind_key('t', lambda: self._toggle_feature("transformations"))
+        self.keyboard.bind_key('k', lambda: self._toggle_feature("calibration"))
         self.keyboard.bind_key(' ', lambda: self._handle_panorama_keys(ord(' ')))
         self.keyboard.bind_key('s', lambda: self._handle_panorama_keys(ord('s')))
         self.keyboard.bind_key('r', lambda: self._handle_panorama_keys(ord('r')))
@@ -95,7 +98,8 @@ class CameraApp:
         self.line_detection.set_active(False)
         self.panorama.set_active(False)
         self.transformations.set_active(False)
-
+        self.calibration.set_active(False)
+        
     
     def _activate_feature(self, feature_name):
         """Activate a specific feature and setup its trackbars."""
@@ -120,6 +124,8 @@ class CameraApp:
         elif feature_name == "transformations":
             self.transformations.set_active(True)
             self.transformations.create_trackbars('Advanced Camera App', self.trackbar_manager)
+        elif feature_name == "calibration":
+            self.calibration.set_active(True)
     
     def _quit(self):
         """Quit the application."""
@@ -138,7 +144,11 @@ class CameraApp:
         if self.panorama.is_active():
             self.panorama.update_from_trackbars('Advanced Camera App')
             processed_frame = self.panorama.process_frame(processed_frame)
-    
+
+        if self.calibration.is_active():
+            self.calibration.run(processed_frame)
+            processed_frame = self.calibration.run(processed_frame)
+            
         # Apply filters
         processed_frame = self.filters.apply_gaussian(processed_frame, 'Advanced Camera App')
         processed_frame = self.filters.apply_bilateral(processed_frame, 'Advanced Camera App')
