@@ -53,6 +53,13 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
   - Real-time preview of the stitched panorama
   - Options to reset and save the panorama
 
+### Transformation Mode
+- **Geometric Transformations**
+  - Real-time rotation, translation and scaling
+  - Adjustable angle, translation and scale factor
+  - Live preview with current values displayed
+
+
 ## 🎮 Keyboard Controls
 
 | Key | Function |
@@ -67,6 +74,7 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
 | `D` | Toggle Hough line detection |
 | `H` | Toggle histogram display |
 | `P` | Toggle panorama mode |
+| `T` | Toggle Transformation mode |
 | `SPACE` | Panorama capture (when in P mode) |
 | `R` | Reset panorama (when in P mode) |
 | `X` | Close panorama window (when in P mode) |
