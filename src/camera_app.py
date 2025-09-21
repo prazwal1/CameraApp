@@ -10,6 +10,7 @@ from .features.image_adjustments import ImageAdjustmentHandler
 from .features.filters import FilterHandler
 from .features.edge_detection import EdgeDetectionHandler
 from .features.line_detection import LineDetectionHandler
+from .features.panorama import PanoramaHandler
 from .features.histogram import HistogramHandler
 from .ui.trackbar_manager import TrackbarManager
 from .ui.display_manager import DisplayManager
@@ -33,7 +34,7 @@ class CameraApp:
         self.edge_detection = EdgeDetectionHandler()
         self.line_detection = LineDetectionHandler()
         self.histogram = HistogramHandler()
-        
+        self.panorama = PanoramaHandler()
         # Application state
         self.running = True
         self.active_feature = None
@@ -56,8 +57,17 @@ class CameraApp:
         self.keyboard.bind_key('b', lambda: self._toggle_feature("bilateral"))
         self.keyboard.bind_key('c', lambda: self._toggle_feature("canny"))
         self.keyboard.bind_key('d', lambda: self._toggle_feature("hough"))
+        self.keyboard.bind_key('p', lambda: self._toggle_feature("panorama"))
+        self.keyboard.bind_key(' ', lambda: self._handle_panorama_keys(ord(' ')))
+        self.keyboard.bind_key('s', lambda: self._handle_panorama_keys(ord('s')))
+        self.keyboard.bind_key('r', lambda: self._handle_panorama_keys(ord('r')))
         self.keyboard.bind_key('h', lambda: self.histogram.toggle())
         self.keyboard.bind_key('q', lambda: self._quit())
+    
+    def _handle_panorama_keys(self, key):
+        """Handle panorama-specific keyboard inputs."""
+        self.panorama.handle_key(key)
+
     
     def _toggle_feature(self, feature_name):
         """Toggle a specific feature on/off."""
@@ -80,6 +90,8 @@ class CameraApp:
         self.filters.set_bilateral_active(False)
         self.edge_detection.set_active(False)
         self.line_detection.set_active(False)
+        self.panorama.set_active(False)
+
     
     def _activate_feature(self, feature_name):
         """Activate a specific feature and setup its trackbars."""
@@ -98,6 +110,9 @@ class CameraApp:
         elif feature_name == "hough":
             self.line_detection.set_active(True)
             self.line_detection.create_trackbars('Advanced Camera App', self.trackbar_manager)
+        elif feature_name == "panorama":
+            self.panorama.set_active(True)
+            self.panorama.create_trackbars('Advanced Camera App', self.trackbar_manager)
     
     def _quit(self):
         """Quit the application."""
@@ -111,6 +126,13 @@ class CameraApp:
         if self.adjustments.is_active():
             self.adjustments.update_from_trackbars('Advanced Camera App')
             processed_frame = self.adjustments.apply(processed_frame)
+        
+        
+        if self.panorama.is_active():
+            self.panorama.update_from_trackbars('Advanced Camera App')
+            processed_frame = self.panorama.process_frame(processed_frame)
+        else:
+            processed_frame = self.panorama.process_frame(processed_frame)
         
         # Apply filters
         processed_frame = self.filters.apply_gaussian(processed_frame, 'Advanced Camera App')

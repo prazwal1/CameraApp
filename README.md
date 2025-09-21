@@ -46,6 +46,13 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
   - Separate window with color-coded channels
   - Automatic scaling and normalization
 
+### Panorama Mode
+- **Panorama Capture**
+  - Capture multiple frames to create a panorama
+  - Adjustable capture interval and maximum frames
+  - Real-time preview of the stitched panorama
+  - Options to reset and save the panorama
+
 ## 🎮 Keyboard Controls
 
 | Key | Function |
@@ -59,6 +66,10 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
 | `C` | Toggle Canny edge detection |
 | `D` | Toggle Hough line detection |
 | `H` | Toggle histogram display |
+| `P` | Toggle panorama mode |
+| `SPACE` | Panorama capture (when in P mode) |
+| `R` | Reset panorama (when in P mode) |
+| `X` | Close panorama window (when in P mode) |
 | `Q` | Quit the application |
 
 ## 📁 Project Structure
@@ -68,7 +79,7 @@ advanced-camera-app/
 ├── main.py                     # Entry point
 ├── src/
 │   ├── __init__.py
-│   ├── camera_app.py          # Main application orchestrator
+│   ├── camera_app.py          # Main application 
 │   ├── core/
 │   │   ├── __init__.py
 │   │   └── camera_manager.py   # Camera operations
@@ -76,10 +87,11 @@ advanced-camera-app/
 │   │   ├── __init__.py
 │   │   ├── color_modes.py      # Color space conversions
 │   │   ├── image_adjustments.py # Brightness/contrast
-│   │   ├── filters.py          # Gaussian & bilateral filters
+│   │   ├── filters.py          # Gaussian & bilateral 
 │   │   ├── edge_detection.py   # Canny edge detection
 │   │   ├── line_detection.py   # Hough line detection
 │   │   └── histogram.py        # Histogram visualization
+│   │   └── panorama.py         # Panorama Mode
 │   └── ui/
 │       ├── __init__.py
 │       ├── trackbar_manager.py # Trackbar operations
@@ -149,14 +161,13 @@ advanced-camera-app/
 
 1. **Launch the application** using one of the installation methods above
 2. **Camera feed** will appear in the main window
-3. **Press 'H'** to toggle the help overlay showing all available controls
-4. **Use number keys (1-3)** to switch between color modes
-5. **Use letter keys** to toggle different features:
+3. **Use number keys (1-3)** to switch between color modes
+4. **Use letter keys** to toggle different features:
    - Each feature is mutually exclusive (only one active at a time)
    - Trackbars appear when a feature is activated
    - Adjust parameters using the trackbars for real-time effects
-6. **Press 'H'** to view histogram in a separate window
-7. **Press 'Q'** to quit the application
+5. **Press 'H'** to view histogram in a separate window
+6. **Press 'Q'** to quit the application
 
 ## ⚙️ Configuration
 

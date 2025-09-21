@@ -81,7 +81,9 @@ class DisplayManager:
             ("1: Color | 2: Gray | 3: HSV", (100, 255, 100)),
             ("A: Adjust | G: Gaussian | B: Bilateral", (100, 255, 100)),
             ("C: Canny Edge | D: Hough Lines", (100, 255, 100)),
+            ("P: Panorama", (100, 255, 100)),
             ("H: Histogram | Q: Quit", (100, 255, 100)),
+            ("SPACE: Panorama capture (when in P mode)", (100, 255, 100)),
             ("", (255, 255, 255)),  # Empty line
             (f"Current Mode: {color_mode}", (255, 200, 100)),
         ]
@@ -92,7 +94,8 @@ class DisplayManager:
                 "gaussian": "Gaussian Blur",
                 "bilateral": "Bilateral Filter",
                 "canny": "Canny Edge Detection",
-                "hough": "Hough Line Detection"
+                "hough": "Hough Line Detection",
+                "panorama": "Panorama Mode"
             }
             feature_display = feature_names.get(active_feature, active_feature.title())
             lines.append((f"Active Feature: {feature_display}", (100, 200, 255)))
