@@ -14,6 +14,7 @@ from .features.panorama import PanoramaHandler
 from .features.histogram import HistogramHandler
 from .features.transformations import ImageTransformationHandler
 from .features.calibrations import CameraCalibration
+from .features.ar import AugmentedRealityHandler
 from .ui.trackbar_manager import TrackbarManager
 from .ui.display_manager import DisplayManager
 from .ui.keyboard_handler import KeyboardHandler
@@ -39,6 +40,7 @@ class CameraApp:
         self.panorama = PanoramaHandler()
         self.transformations = ImageTransformationHandler()
         self.calibration = CameraCalibration()
+        self.ar = AugmentedRealityHandler()
         # Application state
         self.running = True
         self.active_feature = None
@@ -64,6 +66,7 @@ class CameraApp:
         self.keyboard.bind_key('p', lambda: self._toggle_feature("panorama"))
         self.keyboard.bind_key('t', lambda: self._toggle_feature("transformations"))
         self.keyboard.bind_key('k', lambda: self._toggle_feature("calibration"))
+        self.keyboard.bind_key('f', lambda: self._toggle_feature("ar"))
         self.keyboard.bind_key(' ', lambda: self._handle_panorama_keys(ord(' ')))
         self.keyboard.bind_key('s', lambda: self._handle_panorama_keys(ord('s')))
         self.keyboard.bind_key('r', lambda: self._handle_panorama_keys(ord('r')))
@@ -99,6 +102,7 @@ class CameraApp:
         self.panorama.set_active(False)
         self.transformations.set_active(False)
         self.calibration.set_active(False)
+        self.ar.set_active(False)
         
     
     def _activate_feature(self, feature_name):
@@ -126,6 +130,8 @@ class CameraApp:
             self.transformations.create_trackbars('Advanced Camera App', self.trackbar_manager)
         elif feature_name == "calibration":
             self.calibration.set_active(True)
+        elif feature_name == "ar":
+            self.ar.set_active(True)
     
     def _quit(self):
         """Quit the application."""
@@ -148,6 +154,9 @@ class CameraApp:
         if self.calibration.is_active():
             self.calibration.run(processed_frame)
             processed_frame = self.calibration.run(processed_frame)
+        
+        if self.ar.is_active():
+            processed_frame = self.ar.draw_3d_model(processed_frame, 'Advanced Camera App')
             
         # Apply filters
         processed_frame = self.filters.apply_gaussian(processed_frame, 'Advanced Camera App')
@@ -187,14 +196,15 @@ class CameraApp:
             processed_frame = self._process_frame(frame)
             
             # Add help overlay
-            display_frame = self.display.add_help_overlay(
-                processed_frame,
-                self.color_modes.current_mode,
-                self.active_feature,
-                self.adjustments.alpha,
-                self.adjustments.beta
-            )
+            # display_frame = self.display.add_help_overlay(
+            #     processed_frame,
+            #     self.color_modes.current_mode,
+            #     self.active_feature,
+            #     self.adjustments.alpha,
+            #     self.adjustments.beta
+            # )
             
+            display_frame = processed_frame
             # Show main window
             cv2.imshow('Advanced Camera App', display_frame)
             

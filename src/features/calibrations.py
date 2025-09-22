@@ -3,7 +3,6 @@ import numpy as np
 import time
 import os
 
-
 class CameraCalibration:
     """Perform camera calibration using chessboard images."""
     def __init__(self, chessboard_size=(9, 6), square_size=25.4, target_image_count=20):
@@ -40,8 +39,13 @@ class CameraCalibration:
         self.active = active
         if active:
             print("Calibration started. Capture chessboard images...")
+            print("Instructions: Hold the chessboard in view at different angles, positions, and orientations.")
+            print("The system will automatically capture images when a stable chessboard is detected.")
+            print("Aim for varied poses to improve calibration accuracy.")
         else:
             print("Calibration deactivated.")
+            if self.image_captured > 0 and self.image_captured < self.target_image_count:
+                print(f"Warning: Only {self.image_captured} images captured. For best results, capture at least {self.target_image_count}.")
     
     def is_active(self):
         """Check if calibration is active."""
@@ -52,18 +56,30 @@ class CameraCalibration:
         Capture a frame for calibration if active.
         """
         if not self.is_active() or self.image_captured >= self.target_image_count:
-            return
+            return frame
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         ret, corners = cv2.findChessboardCorners(gray, self.chessboard_size, None)
 
-        if ret and (time.time() - self.last_capture_time > 1):  # 1 sec delay
+        if ret:
+            # Refine corner positions for accuracy
+            corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), self.criteria)
+            
+            # Always draw detected corners for visual feedback
             cv2.drawChessboardCorners(frame, self.chessboard_size, corners, ret)
-            self.objpoints.append(self._object_points())
-            self.imgpoints.append(corners)
-            self.image_captured += 1
-            self.last_capture_time = time.time()
-            print(f"[INFO] Captured image {self.image_captured}/{self.target_image_count}")
+            
+            # Capture only if enough time has passed (to allow user to reposition)
+            if time.time() - self.last_capture_time > 2:  # Increased to 2 sec for better user control
+                self.objpoints.append(self._object_points())
+                self.imgpoints.append(corners)
+                self.image_captured += 1
+                self.last_capture_time = time.time()
+                print(f"[INFO] Captured image {self.image_captured}/{self.target_image_count}")
+                # Flash or indicate capture
+                cv2.putText(frame, "Captured!", (frame.shape[1]//2 - 100, frame.shape[0]//2), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+        
+        return frame
      
     def _compute_errors(self):
         self.mean_error = 0
@@ -73,13 +89,25 @@ class CameraCalibration:
             )
             error = cv2.norm(self.imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
             self.mean_error += error
-        print(f"Total re-projection error: {self.mean_error/len(self.objpoints):.4f}")
+        mean_error = self.mean_error / len(self.objpoints)
+        print(f"Total re-projection error: {mean_error:.4f}")
+        if mean_error > 1.0:
+            print("Warning: High re-projection error. Consider recapturing images for better calibration.")
 
     def run(self, frame):
         """
         Process a frame for calibration if active.
         """
-        self.capture_frame(frame)
+        if self.active:
+            frame = self.capture_frame(frame)
+            
+            # Add progress overlay
+            progress_text = f"Captured: {self.image_captured}/{self.target_image_count}"
+            cv2.putText(frame, progress_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            if self.image_captured < self.target_image_count:
+                instruction_text = "Move chessboard to new position"
+                cv2.putText(frame, instruction_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
         if self.image_captured >= self.target_image_count and not self.calibrated:
             try:
@@ -98,6 +126,14 @@ class CameraCalibration:
                         rvecs=self.rvecs, tvecs=self.tvecs
                     )
                     print("Calibration data saved to output/calibration.npz")
+                    # Show success on frame
+                    cv2.putText(frame, "Calibration Complete!", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                else:
+                    print("Calibration failed: Insufficient data or poor image quality.")
             except cv2.error as e:
                 print(f"Calibration failed: {e}")
+                # Reset for retry
+                self.objpoints = []
+                self.imgpoints = []
+                self.image_captured = 0
         return frame
