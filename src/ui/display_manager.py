@@ -1,8 +1,3 @@
-"""
-Display Manager
-Handles UI overlays and display formatting.
-"""
-
 import cv2
 import numpy as np
 
@@ -15,53 +10,47 @@ class DisplayManager:
         self.font_scale = 0.6
         self.thickness = 2
         self.line_spacing = 25
+        self.help_window_name = "Help Controls"
+        self.help_window_created = False
     
     def add_help_overlay(self, frame, color_mode, active_feature, alpha, beta):
         """
-        Add help text overlay to the frame.
+        Display help text in a separate window.
         
         Args:
-            frame (numpy.ndarray): Input frame
+            frame (numpy.ndarray): Input frame (used for sizing reference)
             color_mode (str): Current color mode
             active_feature (str): Currently active feature
             alpha (float): Current contrast value
             beta (int): Current brightness value
             
         Returns:
-            numpy.ndarray: Frame with overlay
+            numpy.ndarray: Original frame (unchanged)
         """
-        overlay_frame = frame.copy()
-        frame_height, frame_width = frame.shape[:2]
-        
         # Create help text lines
         help_lines = self._create_help_text(color_mode, active_feature, alpha, beta)
         
-        # Calculate overlay dimensions
-        overlay_height = len(help_lines) * self.line_spacing + 20
-        overlay_width = min(frame_width - 20, 600)
+        # Calculate window dimensions
+        overlay_width = 600
+        overlay_height = len(help_lines) * self.line_spacing + 40
         
-        # Create semi-transparent background
-        overlay_bg = np.zeros((overlay_height, overlay_width, 3), dtype=np.uint8)
-        overlay_bg[:] = (0, 0, 0)  # Black background
+        # Create help window if not already created
+        if not self.help_window_created:
+            cv2.namedWindow(self.help_window_name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(self.help_window_name, overlay_width, overlay_height)
+            self.help_window_created = True
         
-        # Position overlay
-        y_start = 10
-        x_start = 10
+        # Create help window content
+        help_frame = np.zeros((overlay_height, overlay_width, 3), dtype=np.uint8)
+        help_frame[:] = (30, 30, 30)  # Dark gray background
         
-        # Ensure overlay fits within frame
-        if y_start + overlay_height > frame_height:
-            y_start = frame_height - overlay_height - 10
-        if x_start + overlay_width > frame_width:
-            x_start = frame_width - overlay_width - 10
+        # Draw help text
+        self._draw_help_text(help_frame, help_lines, 10, 20)
         
-        # Apply background with transparency
-        overlay_region = overlay_frame[y_start:y_start+overlay_height, x_start:x_start+overlay_width]
-        cv2.addWeighted(overlay_region, 0.3, overlay_bg, 0.7, 0, overlay_region)
+        # Display in separate window
+        cv2.imshow(self.help_window_name, help_frame)
         
-        # Add text to overlay
-        self._draw_help_text(overlay_frame, help_lines, x_start + 10, y_start + 20)
-        
-        return overlay_frame
+        return frame  # Return original frame unchanged
     
     def _create_help_text(self, color_mode, active_feature, alpha, beta):
         """
@@ -82,9 +71,8 @@ class DisplayManager:
             ("A: Adjust | G: Gaussian | B: Bilateral", (100, 255, 100)),
             ("C: Canny Edge | D: Hough Lines", (100, 255, 100)),
             ("P: Panorama | T: Transformations", (100, 255, 100)),
-            ("K: Calibration", (100, 255, 100)),
+            ("K: Calibration | F: Augmented Reality", (100, 255, 100)),
             ("H: Histogram | Q: Quit", (100, 255, 100)),
-            ("SPACE: Panorama capture (when in P mode)", (100, 255, 100)),
             ("", (255, 255, 255)),  # Empty line
             (f"Current Mode: {color_mode}", (255, 200, 100)),
         ]
@@ -103,6 +91,14 @@ class DisplayManager:
         
         if active_feature == "adjustments":
             lines.append((f"Contrast: {alpha:.1f} | Brightness: {beta}", (200, 200, 255)))
+        
+        if active_feature == "panorama":
+            lines.append(("", (255, 255, 255)))  # Empty line
+            lines.append(("Panorama Controls:", (255, 255, 255)))
+            lines.append(("SPACE: Capture frame or start/stop", (100, 255, 100)))
+            lines.append(("S: Save panorama", (100, 255, 100)))
+            lines.append(("R: Reset", (100, 255, 100)))
+            
         
         return lines
     
@@ -201,3 +197,9 @@ class DisplayManager:
                 break
         
         return panel
+    
+    def destroy_help_window(self):
+        """Destroy the help window if it exists."""
+        if self.help_window_created:
+            cv2.destroyWindow(self.help_window_name)
+            self.help_window_created = False

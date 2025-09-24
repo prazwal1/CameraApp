@@ -5,7 +5,7 @@ import os
 class AugmentedRealityHandler:
     """Handles augmented reality features."""
     
-    def __init__(self, calibration_file='output/calibration.npz', model_path='models/trex_model.obj', marker_length=0.05, model_scale_factor=0.0005, rotate_model=True):
+    def __init__(self, calibration_file='output/calibration.npz', model_path='models/trex_model.obj', marker_length=0.05, model_scale_factor=0.0004, rotate_model=True):
         """Initialize AR state."""
         self.active = False
         self.calibration_file = calibration_file
@@ -105,8 +105,7 @@ class AugmentedRealityHandler:
                 
                 # Optional rotation to orient upright (e.g., if model is lying on side)
                 if rotate:
-                    # Example: Rotate 90 degrees around X-axis (adjust as needed)
-                    # Rotate 90 degrees around X-axis, then 180 degrees around Z-axis to face towards viewer
+                    # Example: Rotate 90 degrees around X-axis, then 180 degrees around Z-axis to face towards viewer
                     rotation_x = np.array([
                         [-1, 0, 0],
                         [0, 0, -1],
@@ -157,27 +156,41 @@ class AugmentedRealityHandler:
             
             if self.model_vertices is not None and self.model_faces:
                 try:
-                    # Project vertices
+                    # Get rotation matrix from rvec
+                    R, _ = cv2.Rodrigues(rvec[0])
+                    
+                    # Transform vertices to camera space for depth calculation
+                    vertices_cam = np.dot(self.model_vertices, R.T) + tvec[0].T
+                    
+                    # Compute depth (average Z) for each face
+                    face_depths = []
+                    for i, face in enumerate(self.model_faces):
+                        if len(face) >= 3:
+                            avg_z = np.mean(vertices_cam[face, 2])
+                            face_depths.append((i, avg_z))
+                    
+                    # Sort faces by depth (farthest to nearest)
+                    face_depths.sort(key=lambda x: x[1], reverse=True)
+                    
+                    # Project all vertices
                     imgpts, _ = cv2.projectPoints(self.model_vertices, rvec[0], tvec[0], self.mtx, self.dist)
                     imgpts = np.int32(imgpts).reshape(-1, 2)
                     
                     # Get frame dimensions for clipping
                     height, width = frame.shape[:2]
                     
-                    # Draw faces with clipping
-                    for face in self.model_faces:
+                    # Draw sorted faces
+                    for i, _ in face_depths:
+                        face = self.model_faces[i]
                         if len(face) >= 3:
                             pts = imgpts[face]
-                            # Clip points to frame bounds to prevent crashes from extreme values
+                            # Clip points to frame bounds
                             pts = np.clip(pts, [0, 0], [width - 1, height - 1])
-                            # Draw outline (safer than fill)
-                            # cv2.fillConvexPoly(frame, pts, (5, 125, 17))  # solid green
-                            cv2.polylines(frame, [pts], True, (0, 0, 0), 1)
+                            # Fill with solid green (assuming convex faces)
+                            cv2.fillConvexPoly(frame, pts, (0, 255, 0))  # Solid green
                 except Exception as e:
                     print(f"Error during projection or drawing: {e}")
             else:
                 print("Model not loaded.")
-        else:
-            print("No ArUco marker detected.")
         
         return frame

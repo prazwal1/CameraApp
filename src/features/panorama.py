@@ -1,14 +1,9 @@
-"""
-Panorama Handler
-Handles panorama creation by stitching multiple camera frames together.
-"""
-
 import cv2
 import numpy as np
 import time
 
 class PanoramaHandler:
-    """Handles panorama creation and image stitching."""
+    """Handles panorama creation and image stitching with manual processing."""
     
     def __init__(self):
         """Initialize panorama handler."""
@@ -17,17 +12,15 @@ class PanoramaHandler:
         self.frames = []
         self.panorama = None
         self.max_frames = 10
-        self.capture_interval = 1.0  # seconds between captures
-        self.last_capture_time = 0
+        self.reproj_threshold = 4.0
         self.current_frame_count = 0
+        self.preview_window_name = "Captured Frame Preview"
+        self.current_frame = None  # Store current frame for manual capture
+        self.panorama_window_name = "Panorama"
         
         # Feature detector and matcher
         self.detector = cv2.SIFT_create()
         self.matcher = cv2.BFMatcher()
-        
-        # Stitching parameters
-        self.confidence_threshold = 0.3
-        self.reproj_threshold = 4.0
     
     def set_active(self, active):
         """
@@ -49,15 +42,6 @@ class PanoramaHandler:
         """
         return self.active
     
-    def is_capturing(self):
-        """
-        Check if currently capturing frames for panorama.
-        
-        Returns:
-            bool: True if capturing, False otherwise
-        """
-        return self.capturing
-    
     def create_trackbars(self, window_name, trackbar_manager):
         """
         Create trackbars for panorama parameters.
@@ -67,8 +51,6 @@ class PanoramaHandler:
             trackbar_manager: Trackbar manager instance
         """
         trackbar_manager.create_trackbar('Max Frames', window_name, self.max_frames, 20)
-        trackbar_manager.create_trackbar('Interval x10', window_name, int(self.capture_interval * 10), 50)
-        trackbar_manager.create_trackbar('Confidence x100', window_name, int(self.confidence_threshold * 100), 100)
         trackbar_manager.create_trackbar('Reproj Thresh', window_name, int(self.reproj_threshold), 10)
     
     def update_from_trackbars(self, window_name):
@@ -82,8 +64,6 @@ class PanoramaHandler:
             return
         
         self.max_frames = max(2, cv2.getTrackbarPos('Max Frames', window_name))
-        self.capture_interval = cv2.getTrackbarPos('Interval x10', window_name) / 10.0
-        self.confidence_threshold = cv2.getTrackbarPos('Confidence x100', window_name) / 100.0
         self.reproj_threshold = max(1, cv2.getTrackbarPos('Reproj Thresh', window_name))
     
     def start_capture(self):
@@ -95,8 +75,8 @@ class PanoramaHandler:
         self.frames = []
         self.panorama = None
         self.current_frame_count = 0
-        self.last_capture_time = time.time()
-        print("Panorama capture started. Move camera slowly left to right or right to left.")
+        cv2.namedWindow(self.preview_window_name, cv2.WINDOW_AUTOSIZE)
+        print("Panorama capture started. Press SPACE to capture each frame, S to stitch, R to reset.")
     
     def stop_capture(self):
         """Stop capturing and create panorama."""
@@ -104,9 +84,10 @@ class PanoramaHandler:
             return
         
         self.capturing = False
+        cv2.destroyWindow(self.preview_window_name)
         if len(self.frames) >= 2:
-            print(f"Creating panorama from {len(self.frames)} frames...")
-            self.create_panorama()
+            print(f"Stitching {len(self.frames)} frames...")
+            self.create_manual_panorama()
         else:
             print("Need at least 2 frames to create panorama.")
     
@@ -130,23 +111,19 @@ class PanoramaHandler:
         if not self.active:
             return frame
         
-        current_time = time.time()
+        self.current_frame = frame.copy()  # Store current frame for manual capture
         display_frame = frame.copy()
         
-        # Auto-capture frames at intervals
-        if (self.capturing and 
-            current_time - self.last_capture_time >= self.capture_interval and
-            len(self.frames) < self.max_frames):
-            
-            self.capture_frame(frame)
-            self.last_capture_time = current_time
-        
-        # Add status overlay
+        # Add progress bar overlay if capturing
         self.add_status_overlay(display_frame)
         
-        # Show panorama if available
+        # Check if panorama window is closed
         if self.panorama is not None:
-            self.show_panorama()
+            try:
+                if cv2.getWindowProperty(self.panorama_window_name, cv2.WND_PROP_VISIBLE) < 1:
+                    self.reset()
+            except:
+                pass
         
         return display_frame
     
@@ -158,6 +135,8 @@ class PanoramaHandler:
             frame (numpy.ndarray): Frame to capture
         """
         if len(self.frames) >= self.max_frames:
+            print(f"Maximum frames ({self.max_frames}) reached.")
+            self.stop_capture()
             return
         
         # Store frame
@@ -165,55 +144,20 @@ class PanoramaHandler:
         self.frames.append(frame_copy)
         self.current_frame_count += 1
         
-        print(f"Captured frame {self.current_frame_count}/{self.max_frames}")
+        # Show preview of captured frame
+        preview_frame = cv2.resize(frame_copy, (300, 200))  # Small preview
+        cv2.imshow(self.preview_window_name, preview_frame)
         
-        # Auto-stop when max frames reached
-        if len(self.frames) >= self.max_frames:
-            self.stop_capture()
+        print(f"Captured frame {self.current_frame_count}/{self.max_frames}")
     
-    def create_panorama(self):
-        """Create panorama from captured frames."""
+    def create_manual_panorama(self):
+        """Create panorama using manual feature matching."""
         if len(self.frames) < 2:
             print("Need at least 2 frames for panorama creation.")
             return
         
         try:
-            # Use OpenCV's Stitcher class for robust panorama creation
-            stitcher = cv2.Stitcher.create(cv2.Stitcher_PANORAMA)
-            
-            # Configure stitcher parameters
-            # stitcher.setPanoConfidenceThresh(self.confidence_threshold)
-            
-            print("Stitching frames...")
-            status, panorama = stitcher.stitch(self.frames)
-            
-            if status == cv2.Stitcher_OK:
-                self.panorama = panorama
-                print("Panorama created successfully!")
-                self.show_panorama()
-            else:
-                error_messages = {
-                    cv2.Stitcher_ERR_NEED_MORE_IMGS: "Need more images",
-                    cv2.Stitcher_ERR_HOMOGRAPHY_EST_FAIL: "Homography estimation failed",
-                    cv2.Stitcher_ERR_CAMERA_PARAMS_ADJUST_FAIL: "Camera parameters adjustment failed"
-                }
-                error_msg = error_messages.get(status, f"Unknown error (code: {status})")
-                print(f"Panorama creation failed: {error_msg}")
-                
-                # Try manual stitching as fallback
-                self.create_manual_panorama()
-                
-        except Exception as e:
-            print(f"Error creating panorama: {e}")
-            self.create_manual_panorama()
-    
-    def create_manual_panorama(self):
-        """Create panorama using manual feature matching (fallback method)."""
-        if len(self.frames) < 2:
-            return
-        
-        try:
-            print("Trying manual panorama stitching...")
+            print("Stitching frames manually...")
             
             # Start with the first frame
             result = self.frames[0].copy()
@@ -226,7 +170,7 @@ class PanoramaHandler:
                     return
             
             self.panorama = result
-            print("Manual panorama created successfully!")
+            print("Panorama created successfully!")
             self.show_panorama()
             
         except Exception as e:
@@ -341,10 +285,7 @@ class PanoramaHandler:
             new_height = int(height * scale)
             display_panorama = cv2.resize(display_panorama, (new_width, new_height))
         
-        cv2.imshow('Panorama', display_panorama)
-        if cv2.waitKey(1) & 0xFF == ord('x'):
-            cv2.destroyWindow('Panorama')
-            self.reset()
+        cv2.imshow(self.panorama_window_name, display_panorama)
     
     def save_panorama(self, filename=None):
         """
@@ -374,42 +315,23 @@ class PanoramaHandler:
     
     def add_status_overlay(self, frame):
         """
-        Add status information overlay to the frame.
+        Add progress bar overlay to the frame (no text).
         
         Args:
             frame (numpy.ndarray): Frame to add overlay to
         """
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        thickness = 2
+        if not self.capturing:
+            return
         
-        # Status text
-        if self.capturing:
-            status = f"Capturing: {len(self.frames)}/{self.max_frames}"
-            color = (0, 255, 0)  # Green
-        else:
-            status = "Ready (Press SPACE to start/stop capture)"
-            color = (0, 255, 255)  # Yellow
+        bar_width = 200
+        bar_height = 20
+        progress = min(self.current_frame_count / self.max_frames, 1.0)
+        filled_width = int(bar_width * progress)
         
-        # Add background rectangle
-        text_size = cv2.getTextSize(status, font, font_scale, thickness)[0]
-        cv2.rectangle(frame, (10, 10), (text_size[0] + 20, text_size[1] + 20), (0, 0, 0), -1)
-        
-        # Add text
-        cv2.putText(frame, status, (15, 30), font, font_scale, color, thickness)
-        
-        # Add instructions
-        instructions = [
-            "P: Toggle panorama mode",
-            "SPACE: Start/Stop capture", 
-            "S: Save panorama",
-            "R: Reset"
-        ]
-        
-        y_offset = 60
-        for instruction in instructions:
-            cv2.putText(frame, instruction, (15, y_offset), font, 0.4, (200, 200, 200), 1)
-            y_offset += 20
+        # Draw progress bar background
+        cv2.rectangle(frame, (15, 10), (15 + bar_width, 10 + bar_height), (50, 50, 50), -1)
+        # Draw filled portion
+        cv2.rectangle(frame, (15, 10), (15 + filled_width, 10 + bar_height), (0, 255, 0), -1)
     
     def handle_key(self, key):
         """
@@ -424,8 +346,11 @@ class PanoramaHandler:
         if not self.active:
             return False
         
-        if key == ord(' '):  # Space - start/stop capture
-            self.toggle_capture()
+        if key == ord(' '):  # Space - capture frame or toggle capture
+            if self.capturing and self.current_frame is not None:
+                self.capture_frame(self.current_frame)
+            else:
+                self.toggle_capture()
             return True
         elif key == ord('s'):  # Save panorama
             self.save_panorama()
@@ -442,30 +367,12 @@ class PanoramaHandler:
         self.frames = []
         self.panorama = None
         self.current_frame_count = 0
-        self.last_capture_time = 0
+        self.current_frame = None
         
-        # Close panorama window if open
+        # Close windows if open
         try:
-            cv2.destroyWindow('Panorama')
+            cv2.destroyWindow(self.panorama_window_name)
+            cv2.destroyWindow(self.preview_window_name)
             print("Panorama reset.")
         except:
             pass
-        
-    
-    def get_frame_count(self):
-        """
-        Get the current number of captured frames.
-        
-        Returns:
-            int: Number of captured frames
-        """
-        return len(self.frames)
-    
-    def has_panorama(self):
-        """
-        Check if a panorama has been created.
-        
-        Returns:
-            bool: True if panorama exists, False otherwise
-        """
-        return self.panorama is not None

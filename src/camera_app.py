@@ -1,8 +1,3 @@
-"""
-Main Camera Application Class
-Orchestrates all camera features and handles the main application loop.
-"""
-
 import cv2
 from .core.camera_manager import CameraManager
 from .features.color_modes import ColorModeHandler
@@ -41,9 +36,11 @@ class CameraApp:
         self.transformations = ImageTransformationHandler()
         self.calibration = CameraCalibration()
         self.ar = AugmentedRealityHandler()
+        
         # Application state
         self.running = True
         self.active_feature = None
+        self.show_help = True  # Track help window visibility
         
         # Setup UI
         self._setup_ui()
@@ -72,11 +69,13 @@ class CameraApp:
         self.keyboard.bind_key('r', lambda: self._handle_panorama_keys(ord('r')))
         self.keyboard.bind_key('h', lambda: self.histogram.toggle())
         self.keyboard.bind_key('q', lambda: self._quit())
+        self.keyboard.bind_key(0xFF, lambda: self._toggle_help())
+        self.keyboard.bind_key(242, lambda: self._toggle_help())  # Alternative F1 key code
+
     
     def _handle_panorama_keys(self, key):
         """Handle panorama-specific keyboard inputs."""
         self.panorama.handle_key(key)
-
     
     def _toggle_feature(self, feature_name):
         """Toggle a specific feature on/off."""
@@ -103,7 +102,6 @@ class CameraApp:
         self.transformations.set_active(False)
         self.calibration.set_active(False)
         self.ar.set_active(False)
-        
     
     def _activate_feature(self, feature_name):
         """Activate a specific feature and setup its trackbars."""
@@ -133,9 +131,16 @@ class CameraApp:
         elif feature_name == "ar":
             self.ar.set_active(True)
     
+    def _toggle_help(self):
+        """Toggle the help window visibility."""
+        self.show_help = not self.show_help
+        if not self.show_help:
+            self.display.destroy_help_window()
+    
     def _quit(self):
         """Quit the application."""
         self.running = False
+        self.display.destroy_help_window()  # Ensure help window is closed on quit
     
     def _process_frame(self, frame):
         """Process frame through all active features."""
@@ -146,13 +151,11 @@ class CameraApp:
             self.adjustments.update_from_trackbars('Advanced Camera App')
             processed_frame = self.adjustments.apply(processed_frame)
         
-        
         if self.panorama.is_active():
             self.panorama.update_from_trackbars('Advanced Camera App')
             processed_frame = self.panorama.process_frame(processed_frame)
 
         if self.calibration.is_active():
-            self.calibration.run(processed_frame)
             processed_frame = self.calibration.run(processed_frame)
         
         if self.ar.is_active():
@@ -168,7 +171,7 @@ class CameraApp:
         # Apply line detection
         processed_frame = self.line_detection.apply(processed_frame, 'Advanced Camera App')
         
-        #Apply transformations
+        # Apply transformations
         processed_frame = self.transformations.apply(processed_frame, 'Advanced Camera App')
         
         # Apply color mode
@@ -179,7 +182,7 @@ class CameraApp:
     def run(self):
         """Main application loop."""
         print("Starting Advanced Camera Application...")
-        print("Press 'H' to see help overlay")
+        print("Press 'F1' to toggle help window")
         
         while self.running:
             # Capture frame
@@ -195,16 +198,17 @@ class CameraApp:
             # Process frame
             processed_frame = self._process_frame(frame)
             
-            # Add help overlay
-            # display_frame = self.display.add_help_overlay(
-            #     processed_frame,
-            #     self.color_modes.current_mode,
-            #     self.active_feature,
-            #     self.adjustments.alpha,
-            #     self.adjustments.beta
-            # )
-            
+            # Show help window if enabled
             display_frame = processed_frame
+            if self.show_help:
+                display_frame = self.display.add_help_overlay(
+                    processed_frame,
+                    self.color_modes.current_mode,
+                    self.active_feature,
+                    self.adjustments.alpha,
+                    self.adjustments.beta
+                )
+            
             # Show main window
             cv2.imshow('Advanced Camera App', display_frame)
             
@@ -213,5 +217,6 @@ class CameraApp:
         
         # Cleanup
         self.camera.release()
+        self.display.destroy_help_window()
         cv2.destroyAllWindows()
         print("Application closed.")
