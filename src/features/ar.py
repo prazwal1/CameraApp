@@ -5,7 +5,7 @@ import os
 class AugmentedRealityHandler:
     """Handles augmented reality features."""
     
-    def __init__(self, calibration_file='output/calibration.npz', model_path='models/trex_model.obj', marker_length=0.05, model_scale_factor=0.0004, rotate_model=True):
+    def __init__(self, calibration_file='output/calibration.npz', model_path='models/trex_model.obj', marker_length=0.12, model_scale_factor=0.0004, rotate_model=True):
         """Initialize AR state."""
         self.active = False
         self.calibration_file = calibration_file
@@ -21,30 +21,6 @@ class AugmentedRealityHandler:
         self._load_calibration()
         self.pinhole_params = {'fx': self.mtx[0, 0], 'fy': self.mtx[1, 1], 'cx': self.mtx[0, 2], 'cy': self.mtx[1, 2]}
         self._load_model(model_scale_factor, rotate_model)
-
-    def my_estimatePoseSingleMarkers(self, corners, marker_size, mtx, distortion):
-        '''
-        This will estimate the rvec and tvec for each of the marker corners detected by:
-        corners, ids, rejectedImgPoints = detector.detectMarkers(image)
-        corners - is an array of detected corners for each detected marker in the image
-        marker_size - is the size of the detected markers
-        mtx - is the camera matrix
-        distortion - is the camera distortion matrix
-        RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
-        '''
-        marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
-                                  [marker_size / 2, marker_size / 2, 0],
-                                  [marker_size / 2, -marker_size / 2, 0],
-                                  [-marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)
-        trash = []
-        rvecs = []
-        tvecs = []
-        for c in corners:
-            nada, R, t = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_IPPE_SQUARE)
-            rvecs.append(R)
-            tvecs.append(t)
-            trash.append(nada)
-        return rvecs, tvecs, trash
 
     def set_active(self, active):
         """
@@ -103,9 +79,8 @@ class AugmentedRealityHandler:
                 centroid = np.mean(self.model_vertices, axis=0)
                 self.model_vertices -= centroid
                 
-                # Optional rotation to orient upright (e.g., if model is lying on side)
+                # Rotation to orient upright (e.g., if model is lying on side)
                 if rotate:
-                    # Example: Rotate 90 degrees around X-axis, then 180 degrees around Z-axis to face towards viewer
                     rotation_x = np.array([
                         [-1, 0, 0],
                         [0, 0, -1],
@@ -148,19 +123,26 @@ class AugmentedRealityHandler:
         if ids is not None and len(ids) > 0:
             # Assume first marker
             marker_corners = corners[0].reshape((4, 2))
+            image_points = marker_corners.reshape(-1, 2).astype(np.float32)
+
+            objp = np.array([
+                [-self.marker_length/2,  self.marker_length/2, 0],  # top-left
+                [ self.marker_length/2,  self.marker_length/2, 0],  # top-right
+                [ self.marker_length/2, -self.marker_length/2, 0],  # bottom-right
+                [-self.marker_length/2, -self.marker_length/2, 0],  # bottom-left
+            ], dtype=np.float32)
             
-            # Pose estimation
-            rvec, tvec, _ = self.my_estimatePoseSingleMarkers(
-                [marker_corners], self.marker_length, self.mtx, self.dist
+            success, rvec, tvec = cv2.solvePnP(
+                objp, image_points, self.mtx, self.dist
             )
-            
-            if self.model_vertices is not None and self.model_faces:
+
+            if success and self.model_vertices is not None and self.model_faces:
                 try:
                     # Get rotation matrix from rvec
-                    R, _ = cv2.Rodrigues(rvec[0])
+                    R, _ = cv2.Rodrigues(rvec)
                     
                     # Transform vertices to camera space for depth calculation
-                    vertices_cam = np.dot(self.model_vertices, R.T) + tvec[0].T
+                    vertices_cam = np.dot(self.model_vertices, R.T) + tvec.T
                     
                     # Compute depth (average Z) for each face
                     face_depths = []
@@ -173,7 +155,7 @@ class AugmentedRealityHandler:
                     face_depths.sort(key=lambda x: x[1], reverse=True)
                     
                     # Project all vertices
-                    imgpts, _ = cv2.projectPoints(self.model_vertices, rvec[0], tvec[0], self.mtx, self.dist)
+                    imgpts, _ = cv2.projectPoints(self.model_vertices, rvec, tvec, self.mtx, self.dist)
                     imgpts = np.int32(imgpts).reshape(-1, 2)
                     
                     # Get frame dimensions for clipping

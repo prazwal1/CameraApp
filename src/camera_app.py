@@ -48,7 +48,8 @@ class CameraApp:
     
     def _setup_ui(self):
         """Initialize the main UI window."""
-        cv2.namedWindow('Advanced Camera App', cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow('Advanced Camera App', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('Advanced Camera App', 800, 600)
     
     def _setup_keyboard_bindings(self):
         """Setup keyboard event handlers."""
@@ -67,11 +68,10 @@ class CameraApp:
         self.keyboard.bind_key(' ', lambda: self._handle_panorama_keys(ord(' ')))
         self.keyboard.bind_key('s', lambda: self._handle_panorama_keys(ord('s')))
         self.keyboard.bind_key('r', lambda: self._handle_panorama_keys(ord('r')))
+        self.keyboard.bind_key('x', lambda: self.calibration.reset())
         self.keyboard.bind_key('h', lambda: self.histogram.toggle())
+        self.keyboard.bind_key(0, lambda: self._toggle_help())  
         self.keyboard.bind_key('q', lambda: self._quit())
-        self.keyboard.bind_key(0xFF, lambda: self._toggle_help())
-        self.keyboard.bind_key(242, lambda: self._toggle_help())  # Alternative F1 key code
-
     
     def _handle_panorama_keys(self, key):
         """Handle panorama-specific keyboard inputs."""

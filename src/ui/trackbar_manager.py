@@ -44,7 +44,7 @@ class TrackbarManager:
             # Check if window exists
             if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 0:
                 cv2.destroyWindow(window_name)
-                cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
             
             # Clear tracking
             if window_name in self.active_trackbars:

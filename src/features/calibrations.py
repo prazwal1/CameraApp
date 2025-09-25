@@ -5,7 +5,7 @@ import os
 
 class CameraCalibration:
     """Perform camera calibration using chessboard images."""
-    def __init__(self, chessboard_size=(9, 6), square_size=25.4, target_image_count=20):
+    def __init__(self, chessboard_size=(9, 6), square_size=15.24, target_image_count=20):
         """
         Initialize the camera calibration parameters.
         """
@@ -13,10 +13,12 @@ class CameraCalibration:
         self.square_size = square_size
         self.target_image_count = target_image_count
         self.calibrated = False
+        self.calibration_complete = False
         self.objpoints = []  # 3D points in real world space
         self.imgpoints = []  # 2D points in image plane
         self.camera_matrix = None
         self.dist_coeffs = None
+        self.mean_error = None
         self.image_captured = 0
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.active = False
@@ -89,9 +91,9 @@ class CameraCalibration:
             )
             error = cv2.norm(self.imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
             self.mean_error += error
-        mean_error = self.mean_error / len(self.objpoints)
-        print(f"Total re-projection error: {mean_error:.4f}")
-        if mean_error > 1.0:
+        self.mean_error /= len(self.objpoints)
+        print(f"Total re-projection error: {self.mean_error:.4f}")
+        if self.mean_error > 1.0:
             print("Warning: High re-projection error. Consider recapturing images for better calibration.")
 
     def run(self, frame):
@@ -99,41 +101,66 @@ class CameraCalibration:
         Process a frame for calibration if active.
         """
         if self.active:
-            frame = self.capture_frame(frame)
-            
-            # Add progress overlay
-            progress_text = f"Captured: {self.image_captured}/{self.target_image_count}"
-            cv2.putText(frame, progress_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
-            if self.image_captured < self.target_image_count:
-                instruction_text = "Move chessboard to new position"
-                cv2.putText(frame, instruction_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            if not self.calibration_complete:
+                frame = self.capture_frame(frame)
+                
+                # Add progress overlay
+                progress_text = f"Captured: {self.image_captured}/{self.target_image_count}"
+                cv2.putText(frame, progress_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                if self.image_captured < self.target_image_count:
+                    instruction_text = "Move chessboard to new position"
+                    cv2.putText(frame, instruction_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-        if self.image_captured >= self.target_image_count and not self.calibrated:
-            try:
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                self.ret, self.camera_matrix, self.dist_coeffs, self.rvecs, self.tvecs = cv2.calibrateCamera(
-                    self.objpoints, self.imgpoints, gray.shape[::-1], None, None
-                )
-                if self.ret:
-                    self.calibrated = True
-                    self.active = False
-                    print("Calibration successful.")
-                    self._compute_errors()
-                    np.savez(
-                        "output/calibration.npz",
-                        mtx=self.camera_matrix, dist=self.dist_coeffs,
-                        rvecs=self.rvecs, tvecs=self.tvecs
+            if self.image_captured >= self.target_image_count and not self.calibration_complete:
+                try:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    self.ret, self.camera_matrix, self.dist_coeffs, self.rvecs, self.tvecs = cv2.calibrateCamera(
+                        self.objpoints, self.imgpoints, gray.shape[::-1], None, None
                     )
-                    print("Calibration data saved to output/calibration.npz")
-                    # Show success on frame
-                    cv2.putText(frame, "Calibration Complete!", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                else:
-                    print("Calibration failed: Insufficient data or poor image quality.")
-            except cv2.error as e:
-                print(f"Calibration failed: {e}")
-                # Reset for retry
-                self.objpoints = []
-                self.imgpoints = []
-                self.image_captured = 0
+                    if self.ret:
+                        self.calibrated = True
+                        self.calibration_complete = True
+                        print("Calibration successful.")
+                        self._compute_errors()
+                        np.savez(
+                            "output/calibration.npz",
+                            mtx=self.camera_matrix, dist=self.dist_coeffs,
+                            rvecs=self.rvecs, tvecs=self.tvecs
+                        )
+                        print("Calibration data saved to output/calibration.npz")
+                        # Show success on frame
+                        cv2.putText(frame, "Calibration Complete!", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    else:
+                        print("Calibration failed: Insufficient data or poor image quality.")
+                except cv2.error as e:
+                    print(f"Calibration failed: {e}")
+                    # Reset for retry
+                    self.reset()
+
+            if self.calibration_complete:
+                # Display calibration results
+                error_text = f"Re-projection Error: {self.mean_error:.4f}"
+                cv2.putText(frame, error_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                if self.mean_error > 1.0:
+                    warning_text = "High error - consider recalibrating"
+                    cv2.putText(frame, warning_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                
+                recalibrate_text = "Press X to recalibrate"
+                cv2.putText(frame, recalibrate_text, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
         return frame
+    
+    def reset(self):
+        """Reset calibration state for recalibration."""
+        self.objpoints = []
+        self.imgpoints = []
+        self.image_captured = 0
+        self.calibration_complete = False
+        self.calibrated = False
+        self.camera_matrix = None
+        self.dist_coeffs = None
+        self.mean_error = None
+        self.last_capture_time = 0
+        print("Calibration reset. Ready to capture again.")
