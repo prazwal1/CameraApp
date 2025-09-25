@@ -16,15 +16,32 @@ from .ui.keyboard_handler import KeyboardHandler
 
 class CameraApp:
     """Main camera application orchestrating all features."""
-    
-    def __init__(self):
-        """Initialize the camera application with all components."""
+
+    def __init__(
+        self,
         # Core components
-        self.camera = CameraManager()
+        camera_index: int = 0,
+
+        # Calibration params
+        chessboard_size=(9, 6),
+        square_size: float = 15.24,
+        target_image_count: int = 20,
+
+        # AR params
+        calibration_file: str = 'output/calibration.npz',
+        model_path: str = 'models/trex_model.obj',
+        marker_length: float = 0.12,
+        model_scale_factor: float = 0.0004,
+        rotate_model: bool = True,
+    ):
+        """Initialize the camera application with all components."""
+
+        # Core components
+        self.camera = CameraManager(camera_index=camera_index)
         self.trackbar_manager = TrackbarManager()
         self.display = DisplayManager()
         self.keyboard = KeyboardHandler()
-        
+
         # Feature handlers
         self.color_modes = ColorModeHandler()
         self.adjustments = ImageAdjustmentHandler()
@@ -34,17 +51,30 @@ class CameraApp:
         self.histogram = HistogramHandler()
         self.panorama = PanoramaHandler()
         self.transformations = ImageTransformationHandler()
-        self.calibration = CameraCalibration()
-        self.ar = AugmentedRealityHandler()
-        
+
+        # Configurable dependencies
+        self.calibration = CameraCalibration(
+            chessboard_size=chessboard_size,
+            square_size=square_size,
+            target_image_count=target_image_count,
+        )
+        self.ar = AugmentedRealityHandler(
+            calibration_file=calibration_file,
+            model_path=model_path,
+            marker_length=marker_length,
+            model_scale_factor=model_scale_factor,
+            rotate_model=rotate_model,
+        )
+
         # Application state
         self.running = True
         self.active_feature = None
         self.show_help = True  # Track help window visibility
-        
+
         # Setup UI
         self._setup_ui()
         self._setup_keyboard_bindings()
+
     
     def _setup_ui(self):
         """Initialize the main UI window."""

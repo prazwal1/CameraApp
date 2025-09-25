@@ -175,10 +175,31 @@ python main.py
    - Trackbars appear when a feature is activated.
    - Adjust parameters using the trackbars for real-time effects.
 5. **Press 'H'** to view histogram in a separate window.
-6. **Press '0' or 'F1'** to toggle the help overlay.
+6. **Press 'F1'** to toggle the help window.
 7. **Press 'Q'** to quit the application.
 
 ## ⚙️ Configuration
+The application uses a YAML configuration file (`config.yaml`) to manage camera, calibration, and AR settings. Example:
+
+```yaml
+camera:
+  camera_index: 0   # Default camera index
+
+calibration:
+  chessboard_size: [9, 6]   # Chessboard pattern size (rows, cols)
+  square_size: 15.24        # Size of each square in mm
+  target_image_count: 20    # Number of images required for calibration
+
+ar:
+  calibration_file: "output/calibration.npz"   # Path to saved calibration file
+  model_path: "models/trex_model.obj"          # 3D model path
+  marker_length: 0.12                          # Marker size in meters
+  model_scale_factor: 0.0004                   # Scaling factor for 3D model
+  rotate_model: true                           # Apply rotation correction
+```
+
+- Edit `config.yaml` to customize camera index, calibration parameters, and AR model settings.
+- The application loads these settings at startup for flexible configuration.
 
 ### Camera Settings
 - Default camera index: `0` (can be modified in `CameraManager`)

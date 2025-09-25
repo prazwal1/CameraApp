@@ -1,0 +1,14 @@
+camera:
+  camera_index: 0   # Default camera index
+
+calibration:
+  chessboard_size: [9, 6]   # Chessboard pattern size (rows, cols)
+  square_size: 15.24        # Size of each square in mm
+  target_image_count: 20    # Number of images required for calibration
+
+ar:
+  calibration_file: "output/calibration.npz"   # Path to saved calibration file
+  model_path: "models/trex_model.obj"          # 3D model path
+  marker_length: 0.12                          # Marker size in meters
+  model_scale_factor: 0.0004                   # Scaling factor for 3D model
+  rotate_model: true                           # Apply rotation correction
