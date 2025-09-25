@@ -11,7 +11,7 @@ class PanoramaHandler:
         self.capturing = False
         self.frames = []
         self.panorama = None
-        self.max_frames = 10
+        self.max_frames = 5
         self.reproj_threshold = 4.0
         self.current_frame_count = 0
         self.preview_window_name = "Captured Frame Preview"
@@ -110,7 +110,7 @@ class PanoramaHandler:
         """
         if not self.active:
             return frame
-        
+                
         self.current_frame = frame.copy()  # Store current frame for manual capture
         display_frame = frame.copy()
         
@@ -136,7 +136,6 @@ class PanoramaHandler:
         """
         if len(self.frames) >= self.max_frames:
             print(f"Maximum frames ({self.max_frames}) reached.")
-            self.stop_capture()
             return
         
         # Store frame
@@ -263,9 +262,32 @@ class PanoramaHandler:
         x_offset = -x_min
         result[y_offset:y_offset+h1, x_offset:x_offset+w1] = img1
         
-        # Blend images
-        mask = (warped > 0).any(axis=2)
-        result[mask] = warped[mask]
+        # Improved blending
+        warped_mask = (warped > 0).any(axis=2)
+        result_mask = (result > 0).any(axis=2)
+        
+        # Non-overlap part of warped
+        non_overlap = warped_mask & ~result_mask
+        result[non_overlap] = warped[non_overlap]
+        
+        # Overlap
+        overlap = warped_mask & result_mask
+        if overlap.any():
+            # Simple linear blend with alpha=0.5
+            alpha = 0.5
+            result[overlap] = (alpha * warped[overlap] + (1 - alpha) * result[overlap]).astype(np.uint8)
+            
+            # Additionally, apply a light blur to the overlap region to smooth any remaining marks
+            overlap_indices = np.where(overlap)
+            if len(overlap_indices[0]) > 0:
+                min_y, max_y = np.min(overlap_indices[0]), np.max(overlap_indices[0])
+                min_x, max_x = np.min(overlap_indices[1]), np.max(overlap_indices[1])
+                # Extract overlap region
+                overlap_region = result[min_y:max_y+1, min_x:max_x+1]
+                # Blur it
+                blurred = cv2.GaussianBlur(overlap_region, (5, 5), 0)
+                # Put back
+                result[min_y:max_y+1, min_x:max_x+1] = blurred
         
         return result
     
@@ -315,7 +337,7 @@ class PanoramaHandler:
     
     def add_status_overlay(self, frame):
         """
-        Add progress bar overlay to the frame (no text).
+        Add progress bar and text overlay to the frame.
         
         Args:
             frame (numpy.ndarray): Frame to add overlay to
@@ -323,6 +345,7 @@ class PanoramaHandler:
         if not self.capturing:
             return
         
+        # Progress bar
         bar_width = 200
         bar_height = 20
         progress = min(self.current_frame_count / self.max_frames, 1.0)
@@ -332,6 +355,12 @@ class PanoramaHandler:
         cv2.rectangle(frame, (15, 10), (15 + bar_width, 10 + bar_height), (50, 50, 50), -1)
         # Draw filled portion
         cv2.rectangle(frame, (15, 10), (15 + filled_width, 10 + bar_height), (0, 255, 0), -1)
+        
+        # Add text instructions
+        cv2.putText(frame, f"Frames: {self.current_frame_count}/{self.max_frames}", (15, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        
+        if self.current_frame_count >= self.max_frames:
+            cv2.putText(frame, "Max frames reached! Press S to stitch", (15, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     
     def handle_key(self, key):
         """
@@ -346,14 +375,14 @@ class PanoramaHandler:
         if not self.active:
             return False
         
-        if key == ord(' '):  # Space - capture frame or toggle capture
+        if key == ord(' '):  # Space - capture frame or start capture
             if self.capturing and self.current_frame is not None:
                 self.capture_frame(self.current_frame)
             else:
                 self.toggle_capture()
             return True
-        elif key == ord('s'):  # Save panorama
-            self.save_panorama()
+        elif key == ord('s'):  # Stitch panorama
+            self.stop_capture()
             return True
         elif key == ord('r'):  # Reset
             self.reset()

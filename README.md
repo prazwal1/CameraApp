@@ -51,7 +51,6 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
   - Capture multiple frames to create a panorama
   - Adjustable capture interval and maximum frames
   - Real-time preview of the stitched panorama
-  - Options to reset and save the panorama
 
 ### Transformation Mode
 - **Geometric Transformations**
@@ -86,7 +85,7 @@ A sophisticated Python OpenCV application for real-time webcam capture with inte
 | `K`      | Toggle camera calibration mode           |
 | `F`      | Toggle augmented reality mode            |
 | `SPACE`  | Panorama capture (when in P mode)        |
-| `S`      | Save panorama (when in P mode)           |
+| `S`      | Stitch panorama (when in P mode)           |
 | `R`      | Reset panorama (when in P mode)          |
 | `X`      | Reset calibration                        |
 | `F1` | Toggle help window                       |

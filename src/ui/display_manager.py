@@ -96,7 +96,7 @@ class DisplayManager:
             lines.append(("", (255, 255, 255)))  # Empty line
             lines.append(("Panorama Controls:", (255, 255, 255)))
             lines.append(("SPACE: Capture frame or start/stop", (100, 255, 100)))
-            lines.append(("S: Save panorama", (100, 255, 100)))
+            lines.append(("S: Stitch panorama", (100, 255, 100)))
             lines.append(("R: Reset", (100, 255, 100)))
             
         
