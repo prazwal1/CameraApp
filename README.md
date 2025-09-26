@@ -2,6 +2,59 @@
 
 A sophisticated Python OpenCV application for real-time webcam capture with interactive image processing features. This modular application provides a wide range of computer vision capabilities including color space conversion, image filtering, edge detection, line detection, panorama creation, geometric transformations, camera calibration, and augmented reality overlays.
 
+## 🛠️ Installation & Usage
+
+### Prerequisites
+- Python 3.8 or higher
+- Working webcam
+- OpenCV-compatible system
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/prazwal1/CameraApp.git
+cd CameraApp
+```
+
+### 2. Using uv (Recommended)
+
+```bash
+uv venv .venv
+# Activate the virtual environment
+# On Unix/macOS:
+source .venv/bin/activate
+# On Windows:
+.venv\Scripts\activate
+
+uv sync
+uv run main.py
+```
+
+### 3. Using pip
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Unix/macOS
+# or
+.venv\Scripts\activate     # On Windows
+
+pip install -r requirements.txt
+python main.py
+```
+
+## 🎯 How to Use
+
+1. **Launch the application** using one of the installation methods above.
+2. **Camera feed** will appear in the main window.
+3. **Use number keys (1-3)** to switch between color modes.
+4. **Use letter keys** to toggle different features:
+   - Only one feature is active at a time (mutually exclusive).
+   - Trackbars appear when a feature is activated.
+   - Adjust parameters using the trackbars for real-time effects.
+5. **Press 'H'** to view histogram in a separate window.
+6. **Press 'F1'** to toggle the help window.
+7. **Press 'Q'** to quit the application.
+
 ## 🚀 Features
 
 ### Core Functionality
@@ -123,59 +176,6 @@ advanced-camera-app/
 ├── pyproject.toml
 └── README.md
 ```
-
-## 🛠️ Installation & Usage
-
-### Prerequisites
-- Python 3.8 or higher
-- Working webcam
-- OpenCV-compatible system
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/prazwal1/CameraApp.git
-cd CameraApp
-```
-
-### 2. Using uv (Recommended)
-
-```bash
-uv venv .venv
-# Activate the virtual environment
-# On Unix/macOS:
-source .venv/bin/activate
-# On Windows:
-.venv\Scripts\activate
-
-uv sync
-uv run main.py
-```
-
-### 3. Using pip
-
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Unix/macOS
-# or
-.venv\Scripts\activate     # On Windows
-
-pip install -r requirements.txt
-python main.py
-```
-
-## 🎯 How to Use
-
-1. **Launch the application** using one of the installation methods above.
-2. **Camera feed** will appear in the main window.
-3. **Use number keys (1-3)** to switch between color modes.
-4. **Use letter keys** to toggle different features:
-   - Only one feature is active at a time (mutually exclusive).
-   - Trackbars appear when a feature is activated.
-   - Adjust parameters using the trackbars for real-time effects.
-5. **Press 'H'** to view histogram in a separate window.
-6. **Press 'F1'** to toggle the help window.
-7. **Press 'Q'** to quit the application.
 
 ## ⚙️ Configuration
 The application uses a YAML configuration file (`config.yaml`) to manage camera, calibration, and AR settings. Example:
